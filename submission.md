@@ -189,9 +189,36 @@ Added a `create_notification()` call after
 
 ## Bug #1 — Listening streak resets on Sundays
 
+**Issue:** #1 — My listening streak keeps resetting
+
 **How I reproduced it:**
 Set nova's `last_listened_at` to yesterday (Saturday) with a streak of 7
 via a direct database update. Then sent `POST /songs/<song_id>/listen`
 with nova's user_id on a Sunday. Expected the streak to increment to 8,
-but it reset to 1 instead. The bug only triggers when today is Sunday
-(weekday() == 6).
+but it reset to 1 instead.
+
+**How I found the root cause:**
+Traced the request from `routes/users.py` to
+`streak_service.update_listening_streak()`. The function has three
+branches: same day (no change), yesterday (increment), and anything else
+(reset). The increment branch had an extra condition:
+`days_since_last == 1 and today.weekday() != 6`.
+The `weekday() != 6` check immediately stood out as unrelated to
+streak logic.
+
+**Root cause:**
+Python's `datetime.weekday()` returns 6 for Sunday. The streak increment
+condition included `today.weekday() != 6`, which means "today is not
+Sunday." This caused the increment branch to be skipped entirely on
+Sundays — even when the user had listened the day before. The code would
+fall through to the `else` branch and reset the streak to 1. There is no
+streak rule that involves the day of the week — the only condition for
+incrementing should be that the user listened yesterday.
+
+**Fix and side-effect check:**
+Removed `and today.weekday() != 6` from the elif condition in
+`update_listening_streak()`, leaving only `days_since_last == 1`.
+Verified the fix by setting nova's last_listened_at to yesterday and
+confirming the streak incremented from 7 to 8 on a Sunday.
+Checked `record_listening_event()` and `get_streak()` — neither is
+affected by this change.
