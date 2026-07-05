@@ -131,19 +131,61 @@ Playlist) before proceeding, raising `ValueError` if not found.
 
 ## Bug #5 — The last song in a playlist never shows up
 
+**Issue:** #5 — The last song in a playlist never shows up
+
 **How I reproduced it:**
 Called `GET /playlists/0d9cabf3-1050-47be-9f4f-e979bfbb4d7c/songs` on a
 playlist with 7 songs in the database. The response returned only 6 songs.
 The last song (highest position) was missing from every playlist tested.
 
+**How I found the root cause:**
+Traced the request from `routes/playlists.py` to
+`playlist_service.get_playlist_songs()`. The function queries songs ordered
+by position correctly, but the final return statement immediately caught
+my attention.
+
+**Root cause:**
+In `playlist_service.get_playlist_songs()`, the return statement used
+`songs[:-1]` instead of `songs`. In Python, `songs[:-1]` returns all
+elements except the last one. This meant the song with the highest
+position value — always the last song in the ordered list — was silently
+dropped from every response, regardless of playlist size.
+
+**Fix and side-effect check:**
+Changed `songs[:-1]` to `songs` in the return statement of
+`get_playlist_songs()`. Verified the fix by calling the same
+
 ## Bug #4 — No notification when a song is rated
 
+**Issue:** #4 — I got notified when a friend added my song to a playlist
+but not when they rated it
+
 **How I reproduced it:**
-Sent `POST /songs/<song_id>/rate` as user darius (cbdc0790) rating nova's
-song "Midnight Drive" with a score of 5. Then called
+Sent `POST /songs/<song_id>/rate` as user darius rating nova's song
+"Midnight Drive" with a score of 5. Then called
 `GET /users/<nova_id>/notifications` and confirmed nova received no
 notification about the rating — only a pre-existing playlist notification
-was present. The `song_rated` notification type never appears.
+was present.
+
+**How I found the root cause:**
+Traced the request from `routes/songs.py` to
+`notification_service.rate_song()`. Compared its structure to
+`add_to_playlist()`, which handles the working notification.
+`add_to_playlist()` calls `create_notification()` after committing to
+the database. `rate_song()` commits and returns immediately with no
+equivalent call.
+
+**Root cause:**
+`rate_song()` in `notification_service.py` saves the rating and commits
+to the database, but never calls `create_notification()`. The
+`add_to_playlist()` function follows the correct pattern — after
+committing, it checks whether the adder is the original sharer and
+creates a notification if not. `rate_song()` was missing this entire
+block, so the song's original sharer never received a `song_rated`
+notification regardless of who submitted the rating.
+
+**Fix and side-effect check:**
+Added a `create_notification()` call after
 
 ## Bug #1 — Listening streak resets on Sundays
 
