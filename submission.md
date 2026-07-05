@@ -1,5 +1,39 @@
 # Mixtape — Submission Doc
+## AI Usage
 
+I used Claude as an AI assistant throughout this project in the following ways:
+
+**Codebase orientation:**
+I shared the contents of each service file with Claude and asked it to
+summarize what each module was responsible for and what its main functions
+did. This helped me build a mental model of the app quickly without
+reading every line myself. I then verified my understanding by tracing
+the call chains manually.
+
+**Data flow tracing:**
+I asked Claude to trace how a user rating a song flows through the
+codebase — from the route to the service — and to identify what each
+step returns. This confirmed my understanding of how routes delegate
+to services and helped me write the data flow section of my codebase map.
+
+**Bug investigation:**
+For each bug, I read the suspicious code myself first, then asked Claude
+to explain specific functions or conditions I didn't fully understand.
+For example:
+- Bug #1: I asked Claude to explain what Python's `weekday()` returns
+  for each day of the week, which confirmed my hypothesis about the
+  Sunday boundary condition.
+- Bug #4: I asked Claude to compare the structure of `add_to_playlist()`
+  and `rate_song()` to identify the structural difference between the
+  working and broken notification paths.
+- Bug #5: I identified the `songs[:-1]` slice myself and asked Claude
+  to confirm what it returns in Python.
+
+**What I verified myself:**
+I reproduced every bug manually before touching any code, and verified
+every fix by calling the relevant API endpoint and checking the response.
+Claude's explanations pointed me in the right direction, but I confirmed
+each root cause by reading the code myself.
 ## Codebase Map
 
 ### Main Files and Their Responsibilities
