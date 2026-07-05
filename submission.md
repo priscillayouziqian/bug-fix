@@ -256,3 +256,6 @@ Verified the fix by setting nova's last_listened_at to yesterday and
 confirming the streak incremented from 7 to 8 on a Sunday.
 Checked `record_listening_event()` and `get_streak()` — neither is
 affected by this change.
+
+## Git Log Screenshot
+![git log](git_log.png)
