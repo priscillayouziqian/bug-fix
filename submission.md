@@ -128,3 +128,28 @@ completing its work. Callers do not need to commit.
 **Consistent validation pattern**
 Every service function validates that key objects exist (User, Song,
 Playlist) before proceeding, raising `ValueError` if not found.
+
+## Bug #5 — The last song in a playlist never shows up
+
+**How I reproduced it:**
+Called `GET /playlists/0d9cabf3-1050-47be-9f4f-e979bfbb4d7c/songs` on a
+playlist with 7 songs in the database. The response returned only 6 songs.
+The last song (highest position) was missing from every playlist tested.
+
+## Bug #4 — No notification when a song is rated
+
+**How I reproduced it:**
+Sent `POST /songs/<song_id>/rate` as user darius (cbdc0790) rating nova's
+song "Midnight Drive" with a score of 5. Then called
+`GET /users/<nova_id>/notifications` and confirmed nova received no
+notification about the rating — only a pre-existing playlist notification
+was present. The `song_rated` notification type never appears.
+
+## Bug #1 — Listening streak resets on Sundays
+
+**How I reproduced it:**
+Set nova's `last_listened_at` to yesterday (Saturday) with a streak of 7
+via a direct database update. Then sent `POST /songs/<song_id>/listen`
+with nova's user_id on a Sunday. Expected the streak to increment to 8,
+but it reset to 1 instead. The bug only triggers when today is Sunday
+(weekday() == 6).
